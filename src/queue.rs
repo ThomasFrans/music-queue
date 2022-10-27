@@ -149,6 +149,41 @@ impl<I, C: QueueableCollection> Queue<I, C> {
         }
     }
 
+    pub fn get_items(&self) -> Vec<&QueueItem<I, C>> {
+        let mut items: Vec<&QueueItem<I, C>> = Vec::with_capacity(self.items.len());
+        if let Some(index) = self.current_item {
+            // Playing
+            for i in &self.history {
+                items.push(&self.items[*i]);
+            }
+            if let Some(ref shuffle_indices) = self.shuffle_order {
+                // Shuffled
+                for i in index..shuffle_indices.len() {
+                    items.push(&self.items[shuffle_indices[i]]);
+                }
+            } else {
+                // Not shuffled
+                for i in index..self.items.len() {
+                    items.push(&self.items[i]);
+                }
+            }
+        } else {
+            // Not playing
+            if let Some(ref shuffle_indices) = self.shuffle_order {
+                // Shuffled
+                for index in 0..self.items.len() {
+                    items[index] = &self.items[shuffle_indices[index]];
+                }
+            } else {
+                // Not shuffled
+                for item in &self.items {
+                    items.push(item);
+                }
+            }
+        }
+        items
+    }
+
     /// Clear the queue.
     pub fn clear(&mut self) {
         self.items.clear();
@@ -700,5 +735,76 @@ mod tests {
         queue.unshuffle();
 
         assert!(matches!(queue.get_current_item(), Ok(QueueItem::Single(SingleItem::Track(Track {id: 0})))));
+    }
+
+    #[test]
+    fn get_items_playing_start() {
+        let mut queue: Queue<SingleItem, CollectionItem> = Queue::from(vec![
+            QueueItem::Single(SingleItem::Track(Track {id: 0})),
+            QueueItem::Single(SingleItem::Track(Track {id: 1})),
+            QueueItem::Single(SingleItem::Track(Track {id: 2})),
+            QueueItem::Single(SingleItem::Track(Track {id: 3})),
+            QueueItem::Single(SingleItem::Track(Track {id: 4})),
+            QueueItem::Single(SingleItem::Track(Track {id: 5})),
+            QueueItem::Single(SingleItem::Track(Track {id: 6})),
+            QueueItem::Single(SingleItem::Track(Track {id: 7})),
+        ]);
+
+
+        for i in 0..queue.items.len() {
+            assert!(matches!(queue.get_items()[i], &QueueItem::Single(SingleItem::Track(Track {id: i}))));
+            if i < queue.items.len() - 1 {
+                queue.next().unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn get_items_shuffled_playing_start() {
+        let mut queue: Queue<SingleItem, CollectionItem> = Queue::from(vec![
+            QueueItem::Single(SingleItem::Track(Track {id: 0})),
+            QueueItem::Single(SingleItem::Track(Track {id: 1})),
+            QueueItem::Single(SingleItem::Track(Track {id: 2})),
+            QueueItem::Single(SingleItem::Track(Track {id: 3})),
+            QueueItem::Single(SingleItem::Track(Track {id: 4})),
+            QueueItem::Single(SingleItem::Track(Track {id: 5})),
+            QueueItem::Single(SingleItem::Track(Track {id: 6})),
+            QueueItem::Single(SingleItem::Track(Track {id: 7})),
+        ]);
+
+        queue.shuffle_order = Some(vec![3, 1, 7, 2, 6, 4, 5, 0]);
+
+        assert!(matches!(queue.get_items()[0], QueueItem::Single(SingleItem::Track(Track {id: 3}))));
+        assert!(matches!(queue.get_items()[1], QueueItem::Single(SingleItem::Track(Track {id: 1}))));
+        assert!(matches!(queue.get_items()[2], QueueItem::Single(SingleItem::Track(Track {id: 7}))));
+        assert!(matches!(queue.get_items()[3], QueueItem::Single(SingleItem::Track(Track {id: 2}))));
+        assert!(matches!(queue.get_items()[7], QueueItem::Single(SingleItem::Track(Track {id: 0}))));
+    }
+
+    #[test]
+    fn get_items_shuffled_playing_middle() {
+        let mut queue: Queue<SingleItem, CollectionItem> = Queue::from(vec![
+            QueueItem::Single(SingleItem::Track(Track {id: 0})),
+            QueueItem::Single(SingleItem::Track(Track {id: 1})),
+            QueueItem::Single(SingleItem::Track(Track {id: 2})),
+            QueueItem::Single(SingleItem::Track(Track {id: 3})),
+            QueueItem::Single(SingleItem::Track(Track {id: 4})),
+            QueueItem::Single(SingleItem::Track(Track {id: 5})),
+            QueueItem::Single(SingleItem::Track(Track {id: 6})),
+            QueueItem::Single(SingleItem::Track(Track {id: 7})),
+        ]);
+
+        queue.next().unwrap();
+        queue.next().unwrap();
+        queue.next().unwrap(); // 3
+
+        queue.shuffle_order = Some(vec![0, 1, 2, 3, 6, 4, 7, 5]);
+
+        assert!(matches!(queue.get_items()[0], QueueItem::Single(SingleItem::Track(Track {id: 0}))));
+        assert!(matches!(queue.get_items()[1], QueueItem::Single(SingleItem::Track(Track {id: 1}))));
+        assert!(matches!(queue.get_items()[2], QueueItem::Single(SingleItem::Track(Track {id: 2}))));
+        assert!(matches!(queue.get_items()[3], QueueItem::Single(SingleItem::Track(Track {id: 3}))));
+        assert!(matches!(queue.get_items()[4], QueueItem::Single(SingleItem::Track(Track {id: 6}))));
+        assert!(matches!(queue.get_items()[7], QueueItem::Single(SingleItem::Track(Track {id: 5}))));
     }
 }
