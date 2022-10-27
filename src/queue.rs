@@ -17,6 +17,8 @@ pub struct Queue<I, C: QueueableCollection> {
     /// Items is a collection of items that this queue can play.
     items: Vec<QueueItem<I, C>>,
     current_item: Option<usize>,
+    repeat_status: Option<RepeatMode>,
+    shuffle: bool,
 }
 
 impl<I, C: QueueableCollection> From<Vec<QueueItem<I, C>>> for Queue<I, C> {
@@ -24,6 +26,8 @@ impl<I, C: QueueableCollection> From<Vec<QueueItem<I, C>>> for Queue<I, C> {
         Queue {
             items,
             current_item: Some(0),
+            repeat_status: None,
+            shuffle: false,
         }
     }
 }
@@ -34,7 +38,7 @@ impl<I, C: QueueableCollection> Queue<I, C> {
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Result<(), QueueError> {
         if let Some(index) = self.current_item {
-            if index < self.items.len() - 1{
+            if index < self.items.len() - 1 {
                 self.next_unchecked();
                 Ok(())
             } else {
@@ -110,6 +114,18 @@ impl<I, C: QueueableCollection> Queue<I, C> {
     }
 }
 
+/// The mode that is used to repeat the queue playback.
+pub enum RepeatMode {
+    /// Repeat all the items in the queue when the queue reaches the end.
+    All,
+    /// Repeat the currently playing container when it ends.
+    /// When the currently playing item is a song, this will behave like
+    /// RepeatMode::Item.
+    Container,
+    /// Repeat the currently playing item when it ends.
+    Item,
+}
+
 /// Errors specific to the Queue.
 pub enum QueueError {
     /// Reached the beginning of the queue, can't go to the previous item.
@@ -142,7 +158,29 @@ mod tests {
         Playlist(Playlist),
     }
 
-    impl QueueableCollection for CollectionItem {}
+    impl QueueableCollection for CollectionItem {
+        type Item = CollectionItem;
+
+        fn get_at_index(&self, index: usize) -> &Self::Item {
+            todo!()
+        }
+
+        fn get_at_index_raw(&self, index: usize) -> &Self::Item {
+            todo!()
+        }
+
+        fn shuffle(&mut self) {
+            todo!()
+        }
+
+        fn unshuffle(&mut self) {
+            todo!()
+        }
+
+        fn toggle_shuffle(&mut self) {
+            todo!()
+        }
+    }
 
     #[derive(Debug)]
     pub enum SingleItem {
@@ -200,6 +238,9 @@ mod tests {
 
         queue.clear();
 
-        assert!(matches!(queue.get_current_item(), Err(QueueError::NotPlaying)))
+        assert!(matches!(
+            queue.get_current_item(),
+            Err(QueueError::NotPlaying)
+        ))
     }
 }
