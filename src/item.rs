@@ -20,7 +20,11 @@ pub trait QueueableCollection {
     fn toggle_shuffle(&mut self);
 }
 
+/// A simple collection of items that implements the QueueableCollection
+/// interface.
 pub struct SimpleCollection<T> {
+    /// The items inside the collection for which the SimpleCollection provides
+    /// the QueueableCollection functionality.
     items: Vec<T>,
     shuffled: bool,
 }
