@@ -16,7 +16,7 @@ use crate::util::shuffled_vec;
 ///     - Container
 ///     - All
 ///     - Off
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Queue<I, C: QueueableCollection> {
     /// Indices showing previously played songs. The history before the
     /// current_item can never change.
@@ -128,6 +128,11 @@ impl<I, C: QueueableCollection> Queue<I, C> {
         }
     }
 
+    // TODO: Properly implement this
+    pub fn play(&mut self) {
+        self.current_item = Some(0);
+    }
+
     /// Gets the currently playing item.
     pub fn get_current_item(&self) -> Result<&QueueItem<I, C>, QueueError> {
         if let Some(index) = self.current_item {
@@ -182,6 +187,23 @@ impl<I, C: QueueableCollection> Queue<I, C> {
             }
         }
         items
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn queue(&mut self, item: QueueItem<I, C>) {
+        self.items.push(item);
+        if let Some(index) = self.current_item {
+            // Playing
+            if let Some(ref mut shuffle_indices) = self.shuffle_order {
+                // Everyday I'm shuffling
+                shuffle_indices.push(shuffle_indices.len());
+                self.shuffle();
+            }
+        }
     }
 
     /// Clear the queue.
@@ -289,7 +311,7 @@ impl<I, C: QueueableCollection> Queue<I, C> {
 }
 
 /// The mode that is used to repeat the queue playback.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum RepeatMode {
     /// Repeat all the items in the queue when the queue reaches the end.
     All,
@@ -301,7 +323,7 @@ pub enum RepeatMode {
     Item,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum UnshuffleStrategy {
     /// Order all the unplayed songs in order. This doesn't preserve the
     /// original order, so songs might play out of order from how they were
@@ -806,5 +828,17 @@ mod tests {
         assert!(matches!(queue.get_items()[3], QueueItem::Single(SingleItem::Track(Track {id: 3}))));
         assert!(matches!(queue.get_items()[4], QueueItem::Single(SingleItem::Track(Track {id: 6}))));
         assert!(matches!(queue.get_items()[7], QueueItem::Single(SingleItem::Track(Track {id: 5}))));
+    }
+
+    #[test]
+    fn queue() {
+        let mut queue: Queue<SingleItem, CollectionItem> = Queue::from(vec![
+            QueueItem::Single(SingleItem::Track(Track {id: 0})),
+            QueueItem::Single(SingleItem::Track(Track {id: 1})),
+        ]);
+
+        queue.queue(QueueItem::Single(SingleItem::Track(Track {id: 2})));
+
+        assert!(matches!(queue.get_items()[2], QueueItem::Single(SingleItem::Track(Track {id: 2}))));
     }
 }

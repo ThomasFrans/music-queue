@@ -63,7 +63,7 @@ impl<T> QueueableCollection for SimpleCollection<T> {
 }
 
 /// A type that can directly be queued.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum QueueItem<I, C: QueueableCollection> {
     /// A single item that can be queued, like a track or episode.
     Single(I),
